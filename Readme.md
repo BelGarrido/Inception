@@ -39,6 +39,8 @@ You must configure:
 - Both volumes must be **Docker named volumes** (bind mounts are forbidden).
 - Both named volumes must store their data inside:
 
+#### Tips
+1- In the Inception project, you usually don't use the --init flag because you are expected to configure your services (Nginx, MariaDB) to behave correctly as the primary process.
 <br>
 <br>
 
@@ -50,13 +52,27 @@ Is an HTTP web server, reverse proxy, content cache, load balancer, TCP/UDP prox
 [proxy server](https://www.cloudflare.com/es-es/learning/cdn/glossary/reverse-proxy/)
 
 ## 1. The "Basics" (Docker Fundamentals)
-- **What is the difference between an Image and a Container? (Hint: Think "Class" vs. "Object").**
+ **What is the difference between an Image and a Container? (Hint: Think "Class" vs. "Object").**
 
-- **What is PID 1? Why is it so important in a container, and what happens when it dies?**
+An image is like a blueprint or a class in object-oriented programming. It is a read-only template that contains the application code, runtime, libraries, environment variables, and configuration files. You can instantiate an image multiple times to create many identical containers.
 
-- **What is the difference between COPY and ADD in a Dockerfile?**
+A container is the actual running instance (the object). It is an isolated process that runs on the host's kernel using the specifications defined by the image. Because it is a process, it has its own isolated filesystem and network stack, but it shares the host's OS kernel rather than requiring its own guest OS.
 
-- **Why should we use ENTRYPOINT instead of CMD for these specific services?**
+ **What is PID 1? Why is it so important in a container, and what happens when it dies?**
+
+PID 1 is the first process started inside a container. It is critical because the lifecycle of the container is tied to it; if PID 1 exits, the container stops immediately.
+
+Unlike normal processes, PID 1 does not respond to default signals like SIGINT (Ctrl+C) or SIGTERM unless the application is specifically programmed to handle them. Additionally, PID 1 is responsible for 'reaping' zombie processes. If the main process isn't built to handle this, the container can become cluttered with dead processes. To solve this, we can use a lightweight init system (like the --init flag or 'tini') to act as PID 1 and manage signals and zombies correctly.
+
+Signal Handling: In a normal Linux system, if a process doesn't handle a SIGINT (Ctrl+C), the kernel kills it. But for PID 1, the kernel assumes it's the "parent of the whole system" and won't kill it unless the process explicitly says it knows how to handle that signal. This is why some containers feel "stuck."
+
+Zombie Processes: When a process finishes, it usually leaves a "zombie" entry in the process table until its parent "reaps" it (acknowledges its death). If your main process (PID 1) isn't designed to be an init system, these zombies stay forever, eating up system resources.
+
+The Lifecycle: In Docker, Container Life = PID 1 Life. If PID 1 finishes its task or crashes, the container's execution environment is immediately destroyed by the Docker Engine.
+
+ **What is the difference between COPY and ADD in a Dockerfile?**
+
+ **Why should we use ENTRYPOINT instead of CMD for these specific services?**
 
 What is a Layer in a Dockerfile? If you change the last line of your Dockerfile, does Docker rebuild the whole thing? (Look up Build Cache).
 
@@ -65,7 +81,11 @@ What is the difference between EXPOSE and PUBLISH (-p)? Does EXPOSE actually ope
 Why do we use Alpine Linux instead of Debian or Ubuntu? (Hint: Check the image sizes and security footprint).
 
 ## 2. Orchestration (Docker Compose)
-- ### What is docker-compose.yml actually doing? Is it creating a script, or is it a configuration for an orchestrator?
+ ### What is docker-compose.yml actually doing? Is it creating a script, or is it a configuration for an orchestrator? 
+ 
+While a Dockerfile defines the environment and dependencies for a single container, the docker-compose.yml is a declarative configuration file used to define and run multi-container applications.
+
+It acts as a set of instructions for the Docker Compose orchestrator. Instead of running multiple docker run commands manually, the YAML file allows us to define services, networks, and volumes in one place. When we run docker-compose up, the tool ensures that the entire infrastructure—like the connection between Nginx and MariaDB—is created according to that blueprint.
 
 - ### What is a "Docker Network"? How do two containers talk to each other if they don't have the same IP address? (Look up Docker DNS resolution).
 
