@@ -39,8 +39,54 @@ You must configure:
 - Both volumes must be **Docker named volumes** (bind mounts are forbidden).
 - Both named volumes must store their data inside:
 
+```
+inception/
+├── Makefile                # Root of the project
+└── srcs/                   # All project source files
+    ├── .env                # Environment variables (passwords, etc.)
+    ├── docker-compose.yml  # The master configuration
+    └── requirements/       # The "Requirements" for each service
+        ├── mariadb/
+        │   ├── Dockerfile
+        │   ├── conf/       # Custom DB configs
+        │   └── tools/      # Setup scripts
+        ├── nginx/
+        │   ├── Dockerfile
+        │   └── conf/       # TLS/SSL and Server configs
+        └── wordpress/
+            ├── Dockerfile
+            ├── conf/       # PHP-FPM configs
+            └── tools/      # WP-CLI scripts
+```
+
+Resumen visual:
+Dockerfile: "Instalo MariaDB y dejo el hueco en /var/lib/mysql".
+.env: "Aquí guardo el nombre de mi base de datos".
+Docker Compose: "Usa ese Dockerfile, pásale las variables del .env y conecta el volumen del host /home/login/data/mariadb al hueco del contenedor".
+
 #### Tips
 1- In the Inception project, you usually don't use the --init flag because you are expected to configure your services (Nginx, MariaDB) to behave correctly as the primary process.
+
+The subject specifically requires you to store your data in /home/login/data/mariadb and /home/login/data/wordpress.
+
+Why does it ask for this?
+
+Transparency: The evaluators want to see that your data actually exists on the host machine. If they run ls /home/user/data/wordpress, they should see the WordPress files.
+
+Control: It proves you understand how to link the container's internal file system to a specific physical location on the disk.
+
+Persistence: It ensures that even if you run docker system prune -a (which deletes images and containers), your database and website files remain safe on your hard drive.
+
+The "Inception" Trap
+In your docker-compose.yml, you will actually see a combination of both:
+
+```YAML
+services:
+  nginx:
+    build: ./requirements/nginx
+    image: my_nginx_image  # This gives your custom build a name!
+The evaluator might ask: "Why do you have both build and image here?" The answer is: build tells Docker how to make it, and image gives that result a name/tag so you can identify it in your system.
+```
 <br>
 <br>
 
@@ -87,9 +133,13 @@ While a Dockerfile defines the environment and dependencies for a single contain
 
 It acts as a set of instructions for the Docker Compose orchestrator. Instead of running multiple docker run commands manually, the YAML file allows us to define services, networks, and volumes in one place. When we run docker-compose up, the tool ensures that the entire infrastructure—like the connection between Nginx and MariaDB—is created according to that blueprint.
 
-- ### What is a "Docker Network"? How do two containers talk to each other if they don't have the same IP address? (Look up Docker DNS resolution).
+### What is a "Docker Network"? How do two containers talk to each other if they don't have the same IP address? (Look up Docker DNS resolution).
+
+A Docker Network is a virtual bridge that provides isolation and connectivity between containers. Two containers communicate using Docker's embedded DNS (domain name system) resolution. Instead of using volatile IP addresses, containers use Service Names defined in the docker-compose.yml as hostnames. For example, WordPress can reach the database simply by connecting to mariadb:3306. Docker's internal DNS server handles the translation of that name into the current internal IP of the target container.
 
 - ### What is the difference between build: . and image: alpine?
+image: alpine tells Docker Compose to pull a pre-existing, read-only image from a registry like Docker Hub. In contrast, build: . instructs Docker to create a custom image locally by executing the instructions found in a Dockerfile located in the specified directory. For the Inception project, we use build because the subject requires us to manually configure our own containers rather than using automated, pre-configured images.
+
 What is depends_on? Does it guarantee that MariaDB is "ready" to accept connections before WordPress starts, or just that the container has "started"?
 
 How do you pass secrets (passwords) to your containers without hardcoding them in the docker-compose.yml? (Look up .env files).
@@ -100,6 +150,7 @@ What happens if two containers try to use the same port on the internal Docker n
 ### Where does data go when a container is deleted?
 
 ### What is a "Bind Mount" vs. a "Named Volume"? The subject has specific requirements about where your data must live on the host machine (/home/user/data).
+The main difference is management. A Named Volume is managed by Docker in an internal directory, making it great for performance but harder to access manually. A Bind Mount maps a specific path on the host machine directly into the container.In the Inception project, we use bind mounts (or specifically configured volumes pointing to host paths) because the subject requires data to persist at /home/login/data. This ensures that our database and website content are stored outside the container's lifecycle and are easily accessible for administrative tasks on the host.
 
 ### Why can't we just save the database inside the container image?
 What is the "copy-on-write" strategy? How does Docker handle it when you modify a file that was originally part of the Image?
@@ -110,6 +161,23 @@ Why must your volumes be mapped to /home/login/data specifically? (This is a cor
 
 ## 4. Networking & Security (TLS/SSL)
 ### What is Port Mapping? Why do we map 443:443 for Nginx but not for MariaDB?
+
+In your docker-compose.yml, only Nginx has a line like ports: - "443:443".
+This tells the Host machine: "If someone talks to me on port 443 (HTTPS), send that traffic straight to the Nginx container."
+
+Nginx is the only container with a "door" open to the outside world. This makes your infrastructure much more secure.
+
+Your other containers (WordPress and MariaDB) are running, but they are hidden.
+
+WordPress is listening on port 9000 (standard for PHP-FPM).
+
+MariaDB is listening on port 3306.
+
+However, they do not have a ports section in the Compose file. This means if you try to go to localhost:9000 in your browser, you will get nothing. They are only reachable inside the Docker Network.
+
+In this architecture, Nginx acts as a Reverse Proxy. We only expose port 443 to the host machine for security reasons—this ensures that all incoming traffic must pass through our web server's firewall and SSL encryption first.
+
+Even though WordPress and MariaDB aren't 'open' to the host, they are accessible to Nginx via the internal Docker network. When a user requests a page, Nginx receives the traffic and forwards it internally to the WordPress container using the FastCGI protocol. This keeps our database and application logic shielded from the public internet
 
 ### How does TLS (SSL) work? Why do you need a .crt and a .key file for Nginx?
 
