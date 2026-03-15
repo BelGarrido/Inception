@@ -1,0 +1,45 @@
+services:
+    mariadb:
+        image: mariadb
+        #build:
+            #context: ./requirements/mariadb
+            #dockerfile: Dockerfile
+        container_name: mariadb
+        env_file: 
+            - .env
+        networks:
+            - inception_network
+        volumes:
+            -db_data:/var/lib/mysql
+        restart: always
+
+    wordpress:
+        image: wordpress
+        #build:
+            #context: ./requirements/wordpress
+            #dockerfile: Dockerfile
+        container_name: wordpress
+        env_file:
+            - .env
+        networks:
+            - inception_network
+        volumes: 
+            - wp_data:/var/www/html
+        restart: always
+
+    nginx:
+        image: nginx
+        #build:
+            #context: ./requirements/nginx
+            #dockerfile: Dockerfile
+        container_name: nginx
+        env_file:
+            - .env
+        networks:
+            - inception_network
+        volumes: 
+            - nginx_conf:/etc/nginx
+        restart: always
+
+networks:
+    inception_network
