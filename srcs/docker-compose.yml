@@ -8,7 +8,7 @@ services:
         env_file: 
             - ./requirements/mariadb/.env
         networks:
-            - inception_network
+            - inception_network_db
         volumes:
             - db_data:/var/lib/mysql
         restart: always
@@ -22,7 +22,8 @@ services:
         env_file:
             - ./requirements/wordpress/.env
         networks:
-            - inception_network
+            - inception_network_nginx
+            - inception_network_db
         volumes: 
             - wp_data:/var/www/html
         restart: always
@@ -36,7 +37,7 @@ services:
         env_file:
             - ./requirements/nginx/.env
         networks:
-            - inception_network
+            - inception_network_nginx
         #command: [nginx-debug, '-g', 'daemon off;']
         ports:
             - "80:80" #port bind(capa7 OSI) / forwarding (capa4)
@@ -46,7 +47,8 @@ services:
         restart: always
 
 networks:
-    inception_network:
+    inception_network_nginx:
+    inception_network_db:
 volumes:
     db_data:
         name: mariadb_data
