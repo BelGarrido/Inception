@@ -20,7 +20,7 @@ Its totally forbiden to add the .env to a public repository, always in the .giti
 
 [ ] Create a Basic Makefile: It should have all, build, up, down, and fclean rules.
 
-[ ] Plan the Network: Decide on a name for your bridge network (e.g., inception_network).
+[✅] Plan the Network: Decide on a name for your bridge network (e.g., inception_network).
 
 Phase 3: Service by Service (The Build)
 
@@ -32,6 +32,10 @@ Tip: Build them in this order so you can test connectivity as you go.
 [ ] Create a script (entrypoint) to initialize the database and create the WordPress user.
 El ENTRYPOINT especifica el ejecutable que usará el contenedor.
 [ ] Task: Ensure MariaDB can listen on the network (edit 50-server.cnf or equivalent to bind to 0.0.0.0).
+
+
+
+
 
 2. Nginx (The Gateway)
 [ ] Write the Dockerfile for Nginx.
