@@ -27,7 +27,7 @@ Phase 3: Service by Service (The Build)
 Tip: Build them in this order so you can test connectivity as you go.
 
 1. MariaDB (The Vault)
-[ ] Write the Dockerfile for MariaDB.
+[✅] Write the Dockerfile for MariaDB.
 
 [ ] Create a script (entrypoint) to initialize the database and create the WordPress user.
 El ENTRYPOINT especifica el ejecutable que usará el contenedor.

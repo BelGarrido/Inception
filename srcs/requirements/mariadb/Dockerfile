@@ -1,38 +1,27 @@
 FROM debian:bookworm
-WORKDIR /usr/local/app
 
-# Install the application dependencies
-COPY requirements.txt ./
+#En MariaDB: El "corazón" está en /var/lib/mysql (donde están los datos), pero nunca pongas el WORKDIR ahí. Es una carpeta de sistema protegida y podrías causar conflictos de permisos si intentas ejecutar scripts desde ahí.
+WORKDIR /usr/local/bin/
 
+# Copy in the source code
+COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
+
+COPY tools/entrypoint.sh .
+
+# Setup an app user so the container doesn't run as the root user
 RUN apt-get update && \
     apt-get install -y mariadb-server && \
     rm -rf /var/lib/apt/lists/*
-    #(/var/lib/apt/lists/)índices (las listas de qué programas existen y en qué versión están) que se descargan cuando haces apt update.
+    #(/var/lib/apt/lists/)las listas de qué programas existen y en qué versión están que se descargan cuando haces apt update.
 
-# Copy in the source code
-COPY src ./src
 EXPOSE 3306
-
-# Setup an app user so the container doesn't run as the root user
-RUN useradd app
-USER app
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
 
-
-
-
-
-
+ENTRYPOINT ["./entrypoint.sh"]
 
 # Evitamos que se abran menús interactivos
-ARG DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && \
-    apt-get install -y mariadb-server && \
-    rm -rf /var/lib/apt/lists/*
-
-
+#ARG DEBIAN_FRONTEND=noninteractive
 
 
 
