@@ -24,7 +24,8 @@ RUN apt install -y curl sudo gnupg2 ca-certificates lsb-release debian-archive-k
 #RUN curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian `lsb_release -cs` nginx"
 RUN sudo tee /etc/apt/sources.list.d/nginx.list
 RUN apt update
-RUN apt install --no-install-recommends -y nginx
+#RUN apt install --no-install-recommends -y nginx
+RUN apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nginx
 RUN rm -rf /var/lib/apt/lists/*
 
 EXPOSE 80
