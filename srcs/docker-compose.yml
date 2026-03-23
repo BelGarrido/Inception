@@ -29,10 +29,10 @@ services:
         restart: always
 
     nginx:
-        image: nginx:latest
-        #build:
-            #context: ./requirements/nginx
-            #dockerfile: Dockerfile
+        #image: nginx:latest
+        build:
+            context: ./requirements/nginx
+            dockerfile: Dockerfile
         container_name: nginx
         env_file:
             - ./requirements/nginx/.env

@@ -4,20 +4,34 @@ FROM debian:bookworm
 WORKDIR /usr/local/bin/
 
 # Copy in the source code
-COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
-COPY tools/entrypoint.sh (?)
+COPY conf/default.conf /etc/nginx/nginx.conf
+#COPY tools/entrypoint.sh (?)
 
 # Setup an app user so the container doesn't run as the root user
-RUN apt-get update && \
-    apt-get install -y mariadb-server && \
-    rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && \
+#    apt install -y curl sudo gnupg2 ca-certificates lsb-release debian-archive-keyring &&\
+#    curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor \
+#    | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null &&\ 
+#    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+#https://nginx.org/packages/debian `lsb_release -cs` nginx" \
+#    | sudo tee /etc/apt/sources.list.d/nginx.list && \
+#    apt install -y nginx &&\ 
+#    rm -rf /var/lib/apt/lists/*
     #(/var/lib/apt/lists/)las listas de qué programas existen y en qué versión están que se descargan cuando haces apt update.
 
-EXPOSE 3306
+RUN apt update
+RUN apt install -y curl sudo gnupg2 ca-certificates lsb-release debian-archive-keyring
+#RUN curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian `lsb_release -cs` nginx"
+RUN sudo tee /etc/apt/sources.list.d/nginx.list
+RUN apt update
+RUN apt install --no-install-recommends -y nginx
+RUN rm -rf /var/lib/apt/lists/*
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 80
 
-ENTRYPOINT ["./entrypoint.sh"]
+#CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
+#ENTRYPOINT ["./entrypoint.sh"]
 
 
 
@@ -51,4 +65,3 @@ ENTRYPOINT ["./entrypoint.sh"]
 # No sudo: En el proceso de build ya eres root por defecto.
 
 # No systemctl: Los contenedores no tienen un sistema de gestión de servicios (init o systemd) corriendo durante el build. Los servicios no se "arrancan" en el RUN, se configuran para que arranquen cuando el contenedor finalmente se ejecute (CMD).
-
