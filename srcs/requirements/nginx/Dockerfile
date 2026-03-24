@@ -1,11 +1,14 @@
 FROM debian:bookworm
 
 #En MariaDB: /var/lib/mysql (donde están los datos), pero nunca pongas el WORKDIR ahí. Es una carpeta de sistema protegida y podrías causar conflictos de permisos si intentas ejecutar scripts desde ahí.
-WORKDIR /usr/local/bin/
+#WORKDIR /usr/local/bin/
 
-# Copy in the source code
-COPY conf/default.conf /etc/nginx/nginx.conf
-#COPY tools/entrypoint.sh (?)
+# COPY <host-path> <image-path> - this instruction tells the builder to copy files from the host and put them into the container image.
+#COPY conf/default.conf /etc/nginx/nginx.conf
+COPY conf/default.conf /etc/nginx/conf.d/default.conf
+COPY tools/setup.sh /usr/local/bin/setup.sh
+
+RUN chmod +x /usr/local/bin/setup.sh
 
 # Setup an app user so the container doesn't run as the root user
 #RUN apt-get update && \
@@ -19,20 +22,18 @@ COPY conf/default.conf /etc/nginx/nginx.conf
 #    rm -rf /var/lib/apt/lists/*
     #(/var/lib/apt/lists/)las listas de qué programas existen y en qué versión están que se descargan cuando haces apt update.
 
-RUN apt update
-RUN apt install -y curl sudo gnupg2 ca-certificates lsb-release debian-archive-keyring
+RUN apt update && apt install -y curl sudo gnupg2 ca-certificates lsb-release debian-archive-keyring
 #RUN curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian `lsb_release -cs` nginx"
 RUN sudo tee /etc/apt/sources.list.d/nginx.list
 RUN apt update
 #RUN apt install --no-install-recommends -y nginx
-RUN apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nginx
-RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nginx && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 80
+EXPOSE 443
 
-#CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["nginx", "-g", "daemon off;"]
 
-#ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./usr/local/bin/setup.sh"]
 
 
 

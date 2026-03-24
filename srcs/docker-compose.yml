@@ -6,7 +6,7 @@ services:
             #dockerfile: Dockerfile
         container_name: mariadb
         env_file: 
-            - ./requirements/mariadb/.env
+            - .env
         networks:
             - inception_network_db
         volumes:
@@ -20,7 +20,7 @@ services:
             #dockerfile: Dockerfile
         container_name: wordpress
         env_file:
-            - ./requirements/wordpress/.env
+            - .env
         networks:
             - inception_network_nginx
             - inception_network_db
@@ -35,15 +35,14 @@ services:
             dockerfile: Dockerfile
         container_name: nginx
         env_file:
-            - ./requirements/nginx/.env
+            - .env
         networks:
             - inception_network_nginx
-        #command: [nginx-debug, '-g', 'daemon off;']
+        # HOST_PORT : CONTAINER_PORT
         ports:
             - "80:80" #port bind(capa7 OSI) / forwarding (capa4)
         volumes: 
-            #- nginx_conf:/etc/nginx
-            - ./requirements/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro #bind volume
+            - wp_data:/var/www/html
         restart: always
 
 networks:
@@ -53,7 +52,6 @@ volumes:
     db_data:
         name: mariadb_data
     wp_data:
-    nginx_conf: 
 
 
 

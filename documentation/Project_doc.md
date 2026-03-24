@@ -536,3 +536,121 @@ Running multi-container systems like **WordPress + MariaDB** requires understand
 - **Host vs Container execution context**
 
 Mastering these concepts is essential for building reliable multi-service environments such as the **Inception project**.
+
+
+
+
+Daemon mode: Nginx, por defecto, intenta ejecutarse en segundo plano (como un demonio). En Docker, si el proceso se va al segundo plano, el proceso principal del contenedor desaparece y Docker cree que ha terminado.
+
+En el caso de Nginx + WordPress, hay un detalle crítico: Nginx y WordPress deben compartir el mismo volumen.
+
+¿Por qué compartir?
+Nginx recibe la petición del navegador. Si el navegador pide index.php, Nginx necesita "ver" ese archivo en el disco para saber que existe, y luego le dice a WordPress (vía FastCGI) que lo ejecute. Si Nginx no tiene acceso a los archivos de WordPress, te dará un error 404 Not Found.
+
+# Technical Note: Nginx Configuration Hierarchy in Docker (Debian)
+
+## Technical Breakdown: OpenSSL Self-Signed Certificate
+TLS: transport layer security
+## 1. Command Architecture
+`openssl req -x509 -nodes -days 365 -newkey rsa:2048`
+
+- **Purpose**: Generates a self-signed SSL/TLS certificate for local development.
+- **Security Level**: RSA 2048-bit (Standard).
+- **Validity**: 1 Year (365 days).
+- **Passphrase**: None (`-nodes`), allowing Nginx to start automatically.
+
+## 2. File Roles
+| File Extension | Name | Visibility | Role |
+| :--- | :--- | :--- | :--- |
+| `.key` | Private Key | **SECRET** | Used by Nginx to decrypt traffic. Must never be shared. |
+| `.crt` | Certificate | **PUBLIC** | Sent to the browser to identify the server. |
+
+## 3. The Subject Field (`-subj`)
+Defines the Identity of the server. The `CN` (Common Name) is the most critical field as it must match the domain name (e.g., login.42.fr) for the browser to consider it potentially valid.
+
+# Technical Note: Environment Variable Propagation
+
+## 1. The .env File
+The `.env` file acts as the single source of truth for project configuration. It is stored on the host machine and should contain sensitive or user-specific data (logins, passwords, IPs).
+
+## 2. Propagation Chain
+1. **Host**: `.env` file exists in the project root.
+2. **Orchestrator**: `docker-compose.yml` reads the `.env` and maps variables using the `env_file` or `environment` directives.
+3. **Container**: The Docker engine injects these variables into the container's shell environment upon startup.
+4. **Script**: The Entrypoint script (shell) accesses these variables using the standard `$VARIABLE` syntax.
+
+## 3. Best Practice: Variable Expansion
+In Shell scripts, it is safer to use `${USER}` instead of `$USER` to avoid ambiguity with surrounding text (e.g., `${USER}.42.fr` ensures the interpreter doesn't look for a variable named `USER.42`).
+
+## 4. Security Tip
+The `.env` file is often ignored in `.gitignore` to prevent leaking credentials, while a `.env.example` is provided with dummy values.
+
+# Technical Note: ENTRYPOINT vs CMD Relationship
+
+## 1. Executive Roles
+- **ENTRYPOINT**: Defines the binary or script that must ALWAYS run when the container starts. It is the "Hard" command.
+- **CMD**: Defines the default arguments passed to the ENTRYPOINT. It is the "Soft" command (can be overridden easily from the CLI).
+
+## 2. Inception Implementation Pattern
+In this project, we use the **Exec Form** (using square brackets `[]`) for both, as it allows Docker to pass signals (like SIGTERM) directly to the processes.
+
+### Workflow:
+1. Docker starts `/usr/local/bin/setup.sh`.
+2. The script performs setup tasks (OpenSSL).
+3. The script finishes with `exec "$@"`.
+4. The system executes the `CMD` (`nginx -g "daemon off;"`), replacing the script process as PID 1.
+
+## 3. Best Practice: Shell Exec
+Always use `exec "$@"` at the end of an entrypoint script. This ensures that the main service (Nginx) receives OS signals correctly, allowing for graceful shutdowns.
+
+
+# Technical Note: Nginx Location Context
+
+## 1. Definition
+The `location` directive defines how Nginx processes specific URI requests. It lives inside the `server` block.
+
+## 2. Syntax Types
+- `location /`: Prefix match. Matches any request starting with `/`.
+- `location = /`: Exact match. Only matches the root.
+- `location ~ \.php$`: Case-sensitive Regular Expression match (used for PHP-FPM).
+
+## 3. Key Directives inside Location
+| Directive | Purpose |
+| :--- | :--- |
+| `root` | Sets the base directory for file lookups. |
+| `index` | Defines the file to serve if the URI is a directory. |
+| `proxy_pass` | Forwards the request to a different server/container. |
+| `try_files` | Checks for file existence in a specific order before failing. |
+
+## 4. Why use `try_files $uri $uri/ =404;`?
+This is a standard security and usability pattern. It prevents Nginx from exposing directory listings and ensures the user gets a proper 404 error instead of a generic server crash if a file is missing.
+
+## 2. The Problem: Overwriting the Master Configuration
+In the initial Dockerfile setup, the following command was used:
+`COPY conf/default.conf /etc/nginx/nginx.conf`
+
+### What happened?
+By copying a simple `server { ... }` block into `/etc/nginx/nginx.conf`, the **Master Configuration** file was destroyed. 
+
+Nginx requires a specific global structure to start. The master file (`nginx.conf`) typically looks like this:
+
+```nginx
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    # ... global settings (SSL, Logs, Gzip) ...
+    
+    include /etc/nginx/conf.d/*.conf; # <--- THIS IS THE KEY
+    include /etc/nginx/sites-enabled/*;
+}
+When you replaced this with your default.conf, Nginx lost its http context, its events context, and its basic execution directives. As a result, the process failed to initialize and exited immediately (Exit Code 0/1).2. The Solution: Modular Configuration (conf.d)Instead of replacing the brain of Nginx, we now "plug in" our configuration as a module.Revised Dockerfile Command:COPY conf/default.conf /etc/nginx/conf.d/default.confWhy this works:Preservation: The original /etc/nginx/nginx.conf provided by the Debian image remains intact.Auto-Inclusion: The master file contains an include /etc/nginx/conf.d/*.conf; directive inside the http block.Validation: Nginx starts globally, then reads your default.conf as a valid "child" configuration.3. Best Practices for Inception (42)Separation of Concerns: Keep global settings in the image and site-specific settings (ports, server_name, fastcgi) in separate files.Path Integrity: In Debian-based containers, always use /etc/nginx/conf.d/ for simple setups or /etc/nginx/sites-available/ + symbolic links for complex ones.PID 1 Stability: Ensure daemon off; is passed via CMD so the container stays "Up" as long as the master process is running.Summary Table: Path ComparisonTarget PathResultStatus/etc/nginx/nginx.confOverwrites global settings❌ CRITICAL ERROR/etc/nginx/conf.d/default.confAdds your server block to the global context✅ RECOMMENDED/etc/nginx/sites-available/Defines the site but requires a symlink to sites-enabled⚠️ OVERKILL FOR NOW
+
+
+
+

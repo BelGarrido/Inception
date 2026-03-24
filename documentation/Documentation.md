@@ -44,6 +44,27 @@ NGINX is:
 Reverse proxy explanation:  
 https://www.cloudflare.com/es-es/learning/cdn/glossary/reverse-proxy/
 
+# Technical Note: Nginx Location Context
+
+## 1. Definition
+The `location` directive defines how Nginx processes specific URI requests. It lives inside the `server` block.
+
+## 2. Syntax Types
+- `location /`: Prefix match. Matches any request starting with `/`.
+- `location = /`: Exact match. Only matches the root.
+- `location ~ \.php$`: Case-sensitive Regular Expression match (used for PHP-FPM).
+
+## 3. Key Directives inside Location
+| Directive | Purpose |
+| :--- | :--- |
+| `root` | Sets the base directory for file lookups. |
+| `index` | Defines the file to serve if the URI is a directory. |
+| `proxy_pass` | Forwards the request to a different server/container. |
+| `try_files` | Checks for file existence in a specific order before failing. |
+
+## 4. Why use `try_files $uri $uri/ =404;`?
+This is a standard security and usability pattern. It prevents Nginx from exposing directory listings and ensures the user gets a proper 404 error instead of a generic server crash if a file is missing.
+
 <br>
 
 # 2. Docker Fundamentals
@@ -345,3 +366,5 @@ What is a Signal?
 When you run docker stop, what signal is sent to your PID 1?
 How should your application handle it?
 ```
+
+
