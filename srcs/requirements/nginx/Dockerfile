@@ -24,11 +24,13 @@ RUN chmod +x /usr/local/bin/setup.sh
 
 RUN apt update && apt install -y curl sudo gnupg2 ca-certificates lsb-release debian-archive-keyring
 #RUN curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] https://nginx.org/packages/debian `lsb_release -cs` nginx"
+#RUN apt-get update && apt-get install -y openssl sed
 RUN sudo tee /etc/apt/sources.list.d/nginx.list
 RUN apt update
 #RUN apt install --no-install-recommends -y nginx
 RUN apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nginx && rm -rf /var/lib/apt/lists/*
-
+#en algun momento quitare esto, es solo una prueba lo de borrar
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 EXPOSE 443
 
 CMD ["nginx", "-g", "daemon off;"]

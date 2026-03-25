@@ -40,7 +40,8 @@ services:
             - inception_network_nginx
         # HOST_PORT : CONTAINER_PORT
         ports:
-            - "80:80" #port bind(capa7 OSI) / forwarding (capa4)
+            - "80:80"
+            - "443:443" #port bind(capa7 OSI) / forwarding (capa4)
         volumes: 
             - wp_data:/var/www/html
         restart: always
