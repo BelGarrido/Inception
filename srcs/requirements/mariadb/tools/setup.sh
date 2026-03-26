@@ -1,31 +1,48 @@
+#!/bin/bash
+
 #Log in to MariaDB:
 #Access the MariaDB shell as the root user:
 
 mkdir -p /var/lib/mysql
-mkdir -p /run/mysqld
+chown -R mysql:mysql /run/mysqld
 
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "Installing database."
+    #prepares the storage
     mysql_install_db --user=mysql --datadir=/var/lib/mysql
 fi
+#manages the process(running the server)
+mysqld_safe --datadir='/var/lib/mysql' &
+
+while ! mariadb-admin ping --silent; do
+    sleep 1
+done
 
 #mysql -u root -p
 
 #Create a Database:
 #Inside the MariaDB shell, create a new database:
 
-CREATE DATABASE mydatabase;
+mariadb -u root -e "CREATE DATABASE $MARIADB_DATABASE;"
 
 #Create a User and Grant Privileges:
 #Create a user and grant access to the database:
 
-CREATE USER 'myuser'@'%' IDENTIFIED BY 'mypassword';
-GRANT ALL PRIVILEGES ON mydatabase.* TO 'myuser'@'%';
-FLUSH PRIVILEGES;
+mariadb -u root -e "CREATE USER IF NOT EXISTS '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';"
+mariadb -u root -e "GRANT ALL PRIVILEGES ON ${MARIADB_DATABASE}.* TO '${MARIADB_USER}'@'%';"
+mariadb -u root -e "FLUSH PRIVILEGES;"
 
-EXIT;
+mariadb -e EXIT;
 
-exec mysqld
+
+mariadb-admin -u root shutdown
+
+echo "MariaDB ready to execute final process"
+while [ -f /var/run/mysqld/mysqld.pid ]; do
+   sleep 1
+done
+
+exec "$@"
 #Esto asegura que MariaDB se convierta en el proceso con el PID 1, permitiendo que Docker gestione correctamente las señales de apagado (SIGTERM).
 
 # ENTRYPOINT [ "" ]

@@ -1,9 +1,9 @@
 services:
     mariadb:
-        image: mariadb:latest
-        #build:
-            #context: ./requirements/mariadb
-            #dockerfile: Dockerfile
+        #image: mariadb:latest
+        build:
+            context: ./requirements/mariadb
+            dockerfile: Dockerfile
         container_name: mariadb
         env_file: 
             - .env

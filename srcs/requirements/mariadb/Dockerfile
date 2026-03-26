@@ -5,19 +5,32 @@ WORKDIR /usr/local/bin/
 
 # Copy in the source code
 COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
-COPY tools/entrypoint.sh (?)
+COPY tools/setup.sh .
+
+RUN chmod +x /usr/local/bin/setup.sh
 
 # Setup an app user so the container doesn't run as the root user
-RUN apt-get update && \
-    apt-get install -y mariadb-server && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt update
+RUN DEBIAN_FRONTED=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends mariadb-server
+RUN rm -rf /var/lib/apt/lists/*
     #(/var/lib/apt/lists/)las listas de qué programas existen y en qué versión están que se descargan cuando haces apt update.
+
+RUN mkdir -p /run/mysqld && \ 
+chown -R mysql:mysql /run/mysqld && \
+chmod 755 /run/mysqld
+
+RUN mkdir -p /var/log/mysql && \ 
+mkdir -p /var/run/mysqld && \
+chown -R mysql:mysql /run/mysqld && \
+chmod 755 /run/mysqld &&\
+chown -R mysql:mysql /var/run/mysqld && \
+chmod 755 /var/run/mysqld
 
 EXPOSE 3306
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["mysqld_safe"]
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./setup.sh"]
 
 
 
