@@ -14,10 +14,10 @@ services:
         restart: always
 
     wordpress:
-        image: wordpress:latest
-        #build:
-            #context: ./requirements/wordpress
-            #dockerfile: Dockerfile
+        #image: wordpress:latest
+        build:
+            context: ./requirements/wordpress
+            dockerfile: Dockerfile
         container_name: wordpress
         env_file:
             - .env

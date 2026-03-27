@@ -1,0 +1,7 @@
+
+
+COMPROBAR SI LOS CERTIFICADOS ESTAN CORRECTOS
+echo | openssl s_client -connect localhost:443 2>/dev/null | openssl x509 -noout -subject
+subject=C = ES, ST = Malaga, L = Malaga, O = 42School, OU = Inception, CN = anagarri.42.fr
+
+subject=C = ES, ST = Malaga, L = Malaga, O = 42School, OU = Inception, CN = anagarri.42.fr

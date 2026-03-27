@@ -38,11 +38,11 @@ El ENTRYPOINT especifica el ejecutable que usará el contenedor.
 
 
 2. Nginx (The Gateway)
-[ ] Write the Dockerfile for Nginx.
+[✅] Write the Dockerfile for Nginx.
 
-[ ] Generate a Self-Signed SSL Certificate using OpenSSL.
+[✅] Generate a Self-Signed SSL Certificate using OpenSSL.
 
-[ ] Configure the nginx.conf to listen only on port 443 with TLS 1.2/1.3.
+[✅] Configure the nginx.conf to listen only on port 443 with TLS 1.2/1.3.
 
 [ ] Task: Test if you can reach a simple index.html via https://login.42.fr.
 

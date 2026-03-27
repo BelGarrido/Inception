@@ -10,6 +10,8 @@ If one component needed an update → The entire server restarted.
 
 ---
 
+https://hub.docker.com/_/wordpress
+
 ## Microservices Architecture (Today)
 
 Each feature runs in isolation:
@@ -64,6 +66,23 @@ The `location` directive defines how Nginx processes specific URI requests. It l
 
 ## 4. Why use `try_files $uri $uri/ =404;`?
 This is a standard security and usability pattern. It prevents Nginx from exposing directory listings and ensures the user gets a proper 404 error instead of a generic server crash if a file is missing.
+
+
+# Technical Note: Port 80 as a Gateway
+
+## 1. Rationale
+Keeping port 80 closed entirely causes a "Connection Refused" if the user 
+omits 'https://'. By keeping it open with a 301 redirect, we ensure 
+accessibility without compromising security.
+
+## 2. Variables used:
+- $host: Resolves to 'anagarri.42.fr'.
+- $request_uri: Preserves the path (e.g., /wp-admin) during the jump.
+
+## 3. SEO & UX
+The 301 status code is "Permanent", meaning modern browsers will remember 
+this jump and go directly to 443 in future sessions without asking Nginx 
+again (HSTS priming).
 
 <br>
 

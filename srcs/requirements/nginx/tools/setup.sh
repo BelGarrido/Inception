@@ -13,6 +13,7 @@ mkdir -p /etc/nginx/ssl
 #         -subj "/C=ES/ST=Malaga/L=Malaga/O=42School/OU=Inception/CN=anagarri.42.fr"
 # fi
 
+#comprobar si con lo de arriba funciona
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout /etc/nginx/ssl/inception.key \
         -out /etc/nginx/ssl/inception.crt \
