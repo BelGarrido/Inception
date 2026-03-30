@@ -28,8 +28,9 @@ RUN apt update && apt install -y curl sudo gnupg2 ca-certificates lsb-release de
 RUN sudo tee /etc/apt/sources.list.d/nginx.list
 RUN apt update
 #RUN apt install --no-install-recommends -y nginx
-RUN apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nginx && rm -rf /var/lib/apt/lists/*
+RUN apt install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends nginx && rm -rf /var/lib/apt/lists/*
 #en algun momento quitare esto, es solo una prueba lo de borrar
+RUN apt install sed
 RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 EXPOSE 443
 

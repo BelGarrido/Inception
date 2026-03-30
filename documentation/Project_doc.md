@@ -654,3 +654,6 @@ When you replaced this with your default.conf, Nginx lost its http context, its 
 
 
 
+www.conf — this is PHP-FPM's pool configuration. Who reads it? PHP-FPM, when it starts up. It configures things like how many worker processes to spawn, which user to run as, which port to listen on. PHP-FPM reads it from /etc/php/8.2/fpm/pool.d/ — it never needs to be in /var/www/html.
+php-fpm.conf — this is PHP-FPM's main configuration. Same story — PHP-FPM reads it at startup from /etc/php/8.2/fpm/. Nothing to do with the web root.
+wp-config.php — who reads this one? WordPress itself, at runtime, when a PHP request comes in. It contains the database credentials, table prefix, secret keys. WordPress looks for it in the web root — /var/www/html/ — because that's where WordPress is installed.

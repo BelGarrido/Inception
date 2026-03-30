@@ -3,7 +3,7 @@
 # create the folder is doesnt exist
 mkdir -p /etc/nginx/ssl
 
-#<sed -i "s/SERVER_NAME_PLACEHOLDER/${USER}.42.fr/g" /etc/nginx/conf.d/default.conf
+sed -i "s/SERVER_NAME_PLACEHOLDER/${USER}.42.fr/g" /etc/nginx/conf.d/default.conf
 
 # creates a certificate only if there's none
 # if [ ! -f /etc/nginx/ssl/inception.crt ]; then

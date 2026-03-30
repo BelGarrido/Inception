@@ -2,27 +2,54 @@ FROM debian:bookworm
 
 #WORKDIR /the/workdir/path
 
-COPY ./conf/www.conf /etc/php/8.2/fpm/pool.d/www.conf
-COPY tools/setup.sh /usr/local/bin/setup.sh
+RUN mkdir -p /var/www/html
+RUN mkdir -p /tmp
 
+COPY tools/setup.sh /usr/local/bin/setup.sh
 RUN chmod +x /usr/local/bin/setup.sh
 
 RUN apt-get update && apt-get install -y \
-    php-fpm \
-    php-mysql \
-    mariadb-client \
+    php8.2-fpm \
+    php8.2-mysql \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+    
+RUN curl https://wordpress.org/latest.zip -o /tmp/wordpress.zip
+RUN ls /tmp
+RUN unzip /tmp/wordpress.zip -d /tmp/
+#RUN unzip -d /var/www/html/ /tmp/wordpress.zip
+RUN ls /var/www/html/
+
+COPY ./conf/www.conf /etc/php/8.2/fpm/pool.d/www.conf
+COPY ./conf/php-fpm.conf /etc/php/8.2/fpm/php-fpm.conf
+COPY ./conf/wp-config.php /tmp/wp-config.php
+
+#RUN chown -R www-data:www-data /var/www/html/wordpress
 
 EXPOSE 9000
 
-CMD [""]
+CMD ["/usr/sbin/php-fpm8.2",  "--nodaemonize", "--fpm-config", "/etc/php/8.2/fpm/php-fpm.conf"]
 
-#ENTRYPOINT ["./usr/local/bin/setup.sh"]
-
-
+ENTRYPOINT ["/usr/local/bin/setup.sh"]
 
 
+
+# cat php8.3-fpm.service 
+# [Unit]
+# Description=The PHP 8.3 FastCGI Process Manager
+# Documentation=man:php-fpm8.3(8)
+# After=network.target
+
+# [Service]
+# Type=notify
+# ExecStart=/usr/sbin/php-fpm8.3 --nodaemonize --fpm-config /etc/php/8.3/fpm/php-fpm.conf
+# ExecStartPost=-/usr/lib/php/php-fpm-socket-helper install /run/php/php-fpm.sock /etc/php/8.3/fpm/pool.d/www.conf 83
+# ExecStopPost=-/usr/lib/php/php-fpm-socket-helper remove /run/php/php-fpm.sock /etc/php/8.3/fpm/pool.d/www.conf 83
+# ExecReload=/bin/kill -USR2 $MAINPID
+
+# [Install]
+# WantedBy=multi-user.target
 
 
 # FROM <image> - this specifies the base image that the build will extend.
