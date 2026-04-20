@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     php8.2-mysql \
     curl \
     unzip \
+    mariadb-client \
     && rm -rf /var/lib/apt/lists/*
     
 RUN curl https://wordpress.org/latest.zip -o /tmp/wordpress.zip
@@ -20,10 +21,12 @@ RUN ls /tmp
 RUN unzip /tmp/wordpress.zip -d /tmp/
 #RUN unzip -d /var/www/html/ /tmp/wordpress.zip
 RUN ls /var/www/html/
+RUN curl -L https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp
+RUN chmod +x /usr/local/bin/wp
 
 COPY ./conf/www.conf /etc/php/8.2/fpm/pool.d/www.conf
 COPY ./conf/php-fpm.conf /etc/php/8.2/fpm/php-fpm.conf
-COPY ./conf/wp-config.php /tmp/wp-config.php
+#COPY ./conf/wp-config.php /tmp/wp-config.php
 
 #RUN chown -R www-data:www-data /var/www/html/wordpress
 
