@@ -1,95 +1,59 @@
 #!/bin/bash
 
-#Log in to MariaDB:
-#Access the MariaDB shell as the root user:
+# Create required runtime and data directories.
+mkdir -p /run/mysqld /var/lib/mysql
+# Ensure MariaDB owns its runtime and data paths.
+chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
-mkdir -p /var/lib/mysql
-chown -R mysql:mysql /run/mysqld
-
+# Initialize system tables only on first container start.
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "Installing database."
-    #prepares the storage
+    # Prepare MariaDB internal system database.
     mysql_install_db --user=mysql --datadir=/var/lib/mysql
 fi
-#manages the process(running the server)
+
+# Start MariaDB temporarily in background to run bootstrap SQL.
 mysqld_safe --datadir='/var/lib/mysql' &
 
+# Wait until MariaDB accepts connections.
 while ! mariadb-admin ping --silent; do
     sleep 1
 done
 
-#mysql -u root -p
-
-#Create a Database:
-#Inside the MariaDB shell, create a new database:
-
+# Create application database from environment variable.
 mariadb -u root -e "CREATE DATABASE $MARIADB_DATABASE;"
 
-#Create a User and Grant Privileges:
-#Create a user and grant access to the database:
-
+# Create application user (if missing) and grant DB privileges.
 mariadb -u root -e "CREATE USER IF NOT EXISTS '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';"
 mariadb -u root -e "GRANT ALL PRIVILEGES ON ${MARIADB_DATABASE}.* TO '${MARIADB_USER}'@'%';"
 mariadb -u root -e "FLUSH PRIVILEGES;"
 
+# Exit client session and stop temporary bootstrap server.
 mariadb -e EXIT;
-
 
 mariadb-admin -u root shutdown
 
 echo "MariaDB ready to execute final process"
+# Wait until background MariaDB fully stops before final exec.
 while [ -f /var/run/mysqld/mysqld.pid ]; do
    sleep 1
 done
 
+# Replace shell with final container command (PID 1).
 exec "$@"
-#Esto asegura que MariaDB se convierta en el proceso con el PID 1, permitiendo que Docker gestione correctamente las señales de apagado (SIGTERM).
 
-# ENTRYPOINT [ "" ]
-
-# 1. Preparar el entorno (El "Suelo" de la DB)
-# Antes de nada, el script debe asegurarse de que existen las carpetas necesarias donde MariaDB guarda sus procesos.
-
-# Acción: Crear la carpeta /run/mysqld y darle los permisos correctos al usuario mysql. Sin esto, MariaDB no puede crear su archivo "socket" y fallará al arrancar.
-
-# 2. Inicialización del Sistema (Solo la primera vez)
-# No queremos borrar la base de datos cada vez que el contenedor se reinicie.
-
-# Lógica: El script mira si ya existe la carpeta /var/lib/mysql/mysql (donde vive la base de datos maestra).
-
-# Si no existe: Ejecuta mysql_install_db, que crea las tablas básicas del sistema.
-
-# 3. Ejecución del SQL de Configuración (La "Magia")
-# Aquí es donde inyectamos tus variables del .env (Usuario, Contraseña, Nombre de DB). Como MariaDB debe estar encendido para procesar SQL, el script hace este "baile":
-
-# Arranca MariaDB en segundo plano (&).
-
-# Espera a que el servicio responda (un pequeño sleep o un bucle de comprobación).
-
-# Lanza los comandos ALTER USER, CREATE DATABASE y GRANT PRIVILEGES usando las variables de entorno.
-
-# Apaga ese proceso temporal de MariaDB.
-
-# 4. Lanzamiento Final (El Relevo)
-# El script termina ejecutando el comando definitivo para que el contenedor se quede encendido.
-
-# Acción: exec mysqld.
-
-# El Pormenor del exec: Usamos exec para que el proceso de MariaDB pase a ser el PID 1 (el proceso principal) del contenedor. Si no usas exec, el contenedor podría no cerrarse correctamente cuando le des a docker stop.
-
-
-# En el Dockerfile:
-
-# Instalas el software (apt-get install mariadb-server).
-
-# Configuras los archivos de red (my.cnf) para que escuche en 0.0.0.0.
-
-# Copias tu entrypoint.sh.
-
-# En el entrypoint.sh:
-
-# Creas los directorios de sistema (/run/mysqld).
-
-# Decides si inicializar o no la DB según si el volumen está vacío.
-
-# Lanzas el proceso final con exec mysqld.
+# -----------------------------------------------------------------------------
+# MariaDB setup script summary:
+# -----------------------------------------------------------------------------
+# Purpose:
+# - Initialize MariaDB data directory on first startup.
+# - Create WordPress database and application user from environment variables.
+# - Hand off to the final container command as PID 1.
+#
+# Why bootstrap in background first:
+# - SQL initialization requires a running MariaDB instance.
+# - Starting temporarily allows CREATE DATABASE/USER/GRANT before final launch.
+#
+# Related files:
+# - Server runtime configuration lives in conf/50-server.cnf.
+# - Container startup command is defined in the MariaDB Dockerfile.

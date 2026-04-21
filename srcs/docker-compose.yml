@@ -1,57 +1,91 @@
+# Compose stack for Inception: MariaDB + WordPress (PHP-FPM) + Nginx.
 services:
+    # Database service for WordPress persistent data.
     mariadb:
+        # Optional official image reference kept for quick fallback.
         #image: mariadb:latest
+        # Build MariaDB image from local project requirements.
         build:
             context: ./requirements/mariadb
             dockerfile: Dockerfile
+        # Stable container name for easy service inspection/logging.
         container_name: mariadb
+        # Load credentials and DB settings from .env.
         env_file: 
             - .env
+        # Private DB network: only DB clients should be attached.
         networks:
             - inception_network_db
+        # Persist MariaDB data across container restarts/rebuilds.
         volumes:
             - db_data:/var/lib/mysql
+        # Keep service available after host reboot or failures.
         restart: always
 
+    # WordPress application service (PHP-FPM runtime).
     wordpress:
+        # Optional official image reference kept for quick fallback.
         #image: wordpress:latest
+        # Build WordPress image from local project requirements.
         build:
             context: ./requirements/wordpress
             dockerfile: Dockerfile
+        # Stable container name for easy service inspection/logging.
         container_name: wordpress
+        # Load WordPress and DB connection settings from .env.
         env_file:
             - .env
+        # Connects to Nginx frontend network and DB backend network.
         networks:
             - inception_network_nginx
             - inception_network_db
+        # Shared WordPress files volume (also mounted by Nginx).
         volumes: 
             - wp_data:/var/www/html
+        # Keep service available after host reboot or failures.
         restart: always
 
+    # Reverse proxy and TLS termination service.
     nginx:
+        # Optional official image reference kept for quick fallback.
         #image: nginx:latest
+        # Build Nginx image from local project requirements.
         build:
             context: ./requirements/nginx
             dockerfile: Dockerfile
+        # Stable container name for easy service inspection/logging.
         container_name: nginx
+        # Load domain/TLS-related variables from .env.
         env_file:
             - .env
+        # Expose only frontend network to the public web server.
         networks:
             - inception_network_nginx
-        # HOST_PORT : CONTAINER_PORT
+        # HOST_PORT:CONTAINER_PORT mappings exposed on the host.
         ports:
+            # HTTP (often redirected to HTTPS by nginx config).
             - "80:80"
-            - "443:443" #port bind(capa7 OSI) / forwarding (capa4)
+            # HTTPS public endpoint.
+            - "443:443"
+        # Read WordPress content from the shared application volume.
         volumes: 
             - wp_data:/var/www/html
+        # Keep service available after host reboot or failures.
         restart: always
 
+# User-defined bridge networks for traffic isolation.
 networks:
+    # Frontend network: Nginx <-> WordPress.
     inception_network_nginx:
+    # Backend network: WordPress <-> MariaDB.
     inception_network_db:
+
+# Named volumes for persistent data.
 volumes:
+    # MariaDB persistent storage volume.
     db_data:
         name: mariadb_data
+    # WordPress application files volume shared by WordPress and Nginx.
     wp_data:
 
 
@@ -80,3 +114,19 @@ volumes:
 #   -e WORDPRESS_DB_PASSWORD=wp_pass 
 #   -e WORDPRESS_DB_NAME=wordpress_db 
 #   wordpress:latest
+
+# -----------------------------------------------------------------------------
+# Docker Compose configuration summary:
+# -----------------------------------------------------------------------------
+# Purpose:
+# - Orchestrate MariaDB, WordPress, and Nginx as a multi-container stack.
+# - Isolate traffic using dedicated frontend and backend Docker networks.
+# - Persist DB data and WordPress files with named volumes.
+#
+# Why two networks:
+# - Limits DB exposure to internal containers only.
+# - Keeps public-facing traffic separated from backend service traffic.
+#
+# Related files:
+# - Service images are built from requirements/*/Dockerfile.
+# - Runtime service behavior is configured in each service's conf/ and tools/ files.

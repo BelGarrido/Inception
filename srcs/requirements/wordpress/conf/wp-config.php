@@ -123,3 +123,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Sets up WordPress vars and included files. */
 require_once ABSPATH . 'wp-settings.php';
+
+// -----------------------------------------------------------------------------
+// WordPress configuration summary:
+// -----------------------------------------------------------------------------
+// Purpose:
+// - Load database connection values from environment variables.
+// - Define core WordPress runtime constants used during bootstrap.
+// - Initialize WordPress by loading wp-settings.php.
+//
+// Why use environment variables:
+// - Keeps credentials out of hardcoded source values.
+// - Allows Docker Compose to inject per-environment settings safely.
+//
+// Related files:
+// - Database service initialization is handled in mariadb/tools/setup.sh.
+// - Site installation/bootstrap commands are run in tools/setup.sh.
