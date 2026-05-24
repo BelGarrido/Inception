@@ -32,6 +32,8 @@ services:
             dockerfile: Dockerfile
         # Stable container name for easy service inspection/logging.
         container_name: wordpress
+        depends_on:
+            - mariadb
         # Load WordPress and DB connection settings from .env.
         env_file:
             - .env

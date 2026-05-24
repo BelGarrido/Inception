@@ -13,7 +13,7 @@ if [ ! -d "/var/lib/mysql/mysql" ]; then
 fi
 
 # Start MariaDB temporarily in background to run bootstrap SQL.
-mysqld_safe --datadir='/var/lib/mysql' &
+mysqld_safe --datadir='/var/lib/mysql' --skip-networking &
 
 # Wait until MariaDB accepts connections.
 while ! mariadb-admin ping --silent; do
@@ -21,7 +21,7 @@ while ! mariadb-admin ping --silent; do
 done
 
 # Create application database from environment variable.
-mariadb -u root -e "CREATE DATABASE $MARIADB_DATABASE;"
+mariadb -u root -e "CREATE DATABASE IF NOT EXISTS $MARIADB_DATABASE;"
 
 # Create application user (if missing) and grant DB privileges.
 mariadb -u root -e "CREATE USER IF NOT EXISTS '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';"

@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     php8.2-fpm \
     php8.2-mysql \
     curl \
+    sendmail \
     unzip \
     mariadb-client \
     && rm -rf /var/lib/apt/lists/*

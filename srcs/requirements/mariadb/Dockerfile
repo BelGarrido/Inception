@@ -1,67 +1,66 @@
 FROM debian:bookworm
 
-#En MariaDB: /var/lib/mysql (donde están los datos), pero nunca pongas el WORKDIR ahí. Es una carpeta de sistema protegida y podrías causar conflictos de permisos si intentas ejecutar scripts desde ahí.
+# Use a neutral working directory for startup scripts.
+# Avoid using /var/lib/mysql as WORKDIR because it is MariaDB data storage.
 WORKDIR /usr/local/bin/
 
-# Copy in the source code
-COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
+# Copy container startup script.
 COPY tools/setup.sh .
 
+# Ensure the entrypoint script can be executed.
 RUN chmod +x /usr/local/bin/setup.sh
 
-# Setup an app user so the container doesn't run as the root user
-RUN apt update
-RUN DEBIAN_FRONTED=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --no-install-recommends mariadb-server
-RUN rm -rf /var/lib/apt/lists/*
-    #(/var/lib/apt/lists/)las listas de qué programas existen y en qué versión están que se descargan cuando haces apt update.
+# Install MariaDB server packages in non-interactive mode.
+# Keep only required packages and clear apt lists to reduce image size.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        mariadb-server \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /run/mysqld && \ 
-chown -R mysql:mysql /run/mysqld && \
-chmod 755 /run/mysqld
+# Copy custom MariaDB server config after package installation.
+COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
 
-RUN mkdir -p /var/log/mysql && \ 
-mkdir -p /var/run/mysqld && \
-chown -R mysql:mysql /run/mysqld && \
-chmod 755 /run/mysqld &&\
-chown -R mysql:mysql /var/run/mysqld && \
-chmod 755 /var/run/mysqld
+# Create MariaDB runtime and log directories with proper ownership.
+RUN mkdir -p /run/mysqld /var/run/mysqld /var/log/mysql \
+    && chown -R mysql:mysql /run/mysqld /var/run/mysqld \
+    && chmod 755 /run/mysqld /var/run/mysqld
 
 EXPOSE 3306
 
+# Default database process launched after setup.sh finishes bootstrap.
 CMD ["mysqld_safe"]
 
+# Run initialization/bootstrap logic before launching MariaDB.
 ENTRYPOINT ["./setup.sh"]
 
+# -----------------------------------------------------------------------------
+# Tips for Dockerfile workflow:
+# -----------------------------------------------------------------------------
+# - The Dockerfile should install packages and prepare image files only.
+# - Runtime initialization with environment variables belongs in entrypoint scripts.
+#
+# Why use `-y` with apt:
+# - It automatically answers "yes" to install prompts so builds do not block.
+#
+# About DEBIAN_FRONTEND=noninteractive:
+# - Some packages open interactive configuration dialogs (debconf).
+# - Setting this variable avoids interactive prompts in automated builds.
+#
 
-
-
-
-
-# FROM <image> - this specifies the base image that the build will extend.
-# WORKDIR <path> - this instruction specifies the "working directory" or the path in the image where files will be copied and commands will be executed.
-# COPY <host-path> <image-path> - this instruction tells the builder to copy files from the host and put them into the container image.
-# RUN <command> - this instruction tells the builder to run the specified command.
-# ENV <name> <value> - this instruction sets an environment variable that a running container will use.
-# EXPOSE <port-number> - this instruction sets configuration on the image that indicates a port the image would like to expose.
-# USER <user-or-uid> - this instruction sets the default user for all subsequent instructions.
-# CMD ["<command>", "<arg1>"] - this instruction sets the default command a container using this image will run.
-
-
-
-# Dockerfile: Solo instala el software (apt install).
-
-# Script .sh (Entrypoint): Se ejecuta dentro del contenedor cuando haces docker run. Es aquí donde se usan las variables de entorno de tu archivo .env.
-
-# 1. El flag -y (Asumir "Yes" a todo)
-# En Linux, casi todos los gestores de paquetes tienen un flag para no preguntar. En apt, es -y. Sin esto, el build se detendrá en la pregunta "¿Desea continuar? [Y/n]".
-
-# 2. La variable DEBIAN_FRONTEND=noninteractive
-# Algunos paquetes (como MariaDB o los que configuran zonas horarias) lanzan menús azules de texto (debconf) para elegir opciones. Para evitar esto, le decimos a Debian que no sea "interactivo".
-
-# 3. El problema de systemctl y sudo
-# Aquí hay un error conceptual común: En un Dockerfile NO se usa systemctl ni sudo.
-
-# No sudo: En el proceso de build ya eres root por defecto.
-
-# No systemctl: Los contenedores no tienen un sistema de gestión de servicios (init o systemd) corriendo durante el build. Los servicios no se "arrancan" en el RUN, se configuran para que arranquen cuando el contenedor finalmente se ejecute (CMD).
+# -----------------------------------------------------------------------------
+# MariaDB Dockerfile summary:
+# -----------------------------------------------------------------------------
+# Purpose:
+# - Build a MariaDB image with project-specific server configuration.
+# - Install MariaDB server and prepare runtime directories.
+# - Delegate DB bootstrap and runtime initialization to setup.sh.
+#
+# Startup model:
+# - ENTRYPOINT runs setup.sh for first-run database initialization.
+# - CMD launches mysqld_safe as the main database process.
+#
+# Related files:
+# - Runtime bootstrap: tools/setup.sh
+# - Server config: conf/50-server.cnf
+# - Service wiring and volumes: srcs/docker-compose.yml
 
