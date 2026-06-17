@@ -297,9 +297,11 @@ Topics highlighted:
 
 In this repository workstream, AI was used for documentation tasks:
 
-- Reorganizing multiple Markdown notes into one coherent README structure
-- Rewriting for clarity while preserving the original ideas and constraints
-- Keeping technical explanations and personal project context intact
+- Architecture Layout & Documentation: Structuring and formatting loose technical engineering notes into a highly readable, compliant Markdown format matching the 42 evaluation constraints.
+
+- Conceptual Validation: Assisting in the clear architectural distinction and technical comparison between Virtual Machines vs. Containers, Network Paradigms, Storage Strategies, and Secrets Processing.
+
+- Debugging Workflows: Analyzing standard MariaDB initial configuration pain points, such as resolving container networking scope issues (bind-address 0.0.0.0) and non-interactive installation strategies (DEBIAN_FRONTEND=noninteractive).
 
 
 
