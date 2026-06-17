@@ -21,7 +21,7 @@ if [ ! -f /var/www/html/wp-config.php ]; then
     # Install WordPress core and create the regular application user.
     wp core install --url=$DOMAIN_NAME --title=$WORDPRESS_TITLE --admin_user=$WORDPRESS_ADMIN_USER --admin_password=$WORDPRESS_ADMIN_PASSWORD --admin_email=$WORDPRESS_ADMIN_EMAIL --allow-root
     wp user create $WORDPRESS_USER $WORDPRESS_USER_EMAIL --user_pass=$WORDPRESS_USER_PASSWORD --allow-root --path=/var/www/html
-    wp theme install lente --allow-root --path=/var/www/html --force --activate
+    #wp theme install lente --allow-root --path=/var/www/html --force --activate
 fi
 
 chown -R www-data:www-data /var/www/html

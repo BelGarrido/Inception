@@ -90,14 +90,14 @@ volumes:
         driver_opts:
             type: none
             o: bind
-            device: /home/anaigd/data/mariadb
+            device: /home/anagarri/data/mariadb
     # WordPress application files volume shared by WordPress and Nginx.
     wp_data:
         driver: local
         driver_opts:
             type: none
             o: bind
-            device: /home/anaigd/data/wp
+            device: /home/anagarri/data/wp
 
 
 

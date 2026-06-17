@@ -1,8 +1,8 @@
-EXEC = docker compose
+EXEC = sudo docker compose
 SRC = -f srcs/docker-compose.yml
 
-DATA_DIR_M = /home/anaigd/data/mariadb
-DATA_DIR_W = /home/anaigd/data/wp
+DATA_DIR_M = /home/anagarri/data/mariadb
+DATA_DIR_W = /home/anagarri/data/wp
 
 # Descomentamos y añadimos TODAS las reglas virtuales
 .PHONY: all stop clean fclean re create_dirs
@@ -22,9 +22,9 @@ clean:
 
 fclean:
 	$(EXEC) $(SRC) down -v --rmi all
-	@if [ -d "/home/anaigd/data" ]; then \
-		rm -rf /home/anaigd/data; \
-		echo "Datos locales eliminados con éxito."; \
+	@if [ -d "/home/anagarri/data" ]; then \
+		sudo rm -rf /home/anagarri/data; \
+		echo "Local data deleted."; \
 	fi
 
 re: fclean all
