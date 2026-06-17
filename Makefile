@@ -14,6 +14,10 @@ create_dirs:
 	mkdir -p $(DATA_DIR_M)
 	mkdir -p $(DATA_DIR_W)
 
+build:
+	$(EXEC) $(SRC) build
+up:
+	$(EXEC) $(SRC) up -d
 stop:
 	$(EXEC) $(SRC) stop
 

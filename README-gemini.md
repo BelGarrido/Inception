@@ -4,33 +4,69 @@
 
 ## Description
 
-Inception is a 42 project focused on building a small microservices infrastructure with Docker.
-The mandatory stack is:
+Inception is a 42 School project focused on system administration and microservices infrastructure design. The goal of this project is to build a robust, multi-container infrastructure completely from scratch using Docker, Docker Compose, and custom Dockerfiles, running inside a dedicated Virtual Machine.
 
-- NGINX with TLSv1.2 or TLSv1.3 only
-- WordPress with php-fpm (without NGINX in the same container)
-- MariaDB (without NGINX)
+### The Mandatory Stack
+The infrastructure consists of the following isolated services:
+- **NGINX**: Acting as the secure entry point, configured with TLSv1.2 or TLSv1.3 only.
+- **WordPress**: Running with `php-fpm` to process PHP scripts, completely isolated without NGINX in its container.
+- **MariaDB**: The relational database management system, completely isolated without NGINX.
 
-The project is developed and tested inside a Virtual Machine, while the services themselves run as isolated containers.
+### Project Architectural Design Choices
+The architecture follows strict system engineering and software design principles:
+- **Separation of Responsibilities (Single Responsibility Principle)**: Each container runs exactly one process (NGINX as the gateway, WordPress as the PHP engine, and MariaDB as the database).
+- **Isolation and Security**: Services communicate via a dedicated private network. If one service fails, the others remain unaffected. Only NGINX is exposed to the host machine via port 443; WordPress (port 9000) and MariaDB (port 3306) remain strictly internal.
+- **Reproducibility**: No pre-built official images are allowed (except for the base OS). Every service is built from a custom `Dockerfile` using Debian/Alpine.
+- **Persistence**: Application data and database files are designed to survive container recreation and deletion by mapping them to specific persistence structures.
 
-### Why this architecture
+---
 
-The core design choices are:
+## Technical Comparisons & Design Analysis
 
-- Separation of responsibilities (Single Responsibility Principle): NGINX as gateway, WordPress as PHP processor, MariaDB as database
-- Isolation: if one service fails, others can continue
-- Reproducibility: custom Dockerfiles and explicit service configuration
-- Persistence: data must survive container recreation
-- Security posture: only NGINX is exposed externally; WordPress and MariaDB stay internal
+### Virtual Machines vs Docker
+- **Virtual Machines**: Emulate an entire hardware stack, including a full Guest Operating System, kernel, and virtual drivers. In this project, the VM provides the underlying isolated development and evaluation environment. It is resource-heavy but provides absolute kernel-level isolation.
+- **Docker (Containers)**: Containers run as isolated processes directly on the Host OS kernel, sharing its resources. They do not require a guest OS, making them extremely lightweight, fast to boot, and highly portable. This model fits perfectly for microservices where consistency and rapid scaling are needed.
 
-### Docker usage in this project
+### Secrets vs Environment Variables
+- **Environment Variables**: Dynamic values injected into the container system at startup. They allow us to control configuration without hardcoding values in the source code. In this project, they are defined in a `.env` file and propagated via Docker Compose.
+- **Secrets Management**: Refers to secure mechanisms specifically designed to store sensitive data (like passwords, API keys, or certificates) encrypted at rest and in transit. In our current architecture, this role is fulfilled by strict environment variable propagation via a `.env` file that is ignored by Git (`.gitignore`) to prevent credential leaks.
 
-- Dockerfile: installs and configures each service
-- docker-compose.yml: orchestrates multi-container setup (services, network, volumes, env propagation)
-- .env: central source of truth for project configuration and sensitive values
-- Entrypoint scripts: runtime setup logic during container start
+### Docker Network vs Host Network
+- **Docker Bridge Network**: Creates an isolated private network (`inception_network`) managed by Docker. Containers get internal IPs and can communicate with each other using their service names as DNS hostnames. This keeps internal components invisible to the outside world.
+- **Host Network**: Removes the isolation between the container and the Docker host, making the container share the host’s networking namespace directly. This approach is explicitly forbidden by the project rules as it breaks the isolation paradigm and security model.
 
-Traffic flow:
+### Docker Volumes vs Bind Mounts
+- **Docker Named Volumes**: Storage abstractions completely managed by Docker within its internal subsystem (`/var/lib/docker/volumes/`). They are safer, decoupled from the host's directory structure, and are the standard requirement for data persistence in this project.
+- **Bind Mounts**: A direct link to an absolute path on the host filesystem (e.g., `/home/login/data`). While flexible for development, they depend on the host's specific directory hierarchy and permission structures. For this project, data persistence paths are directed to `/home/anagarri/data/mariadb` and `/home/anagarri/data/wordpress`.
+
+The documented persistence objective is that data remains outside container lifecycle and is stored in host-visible paths, including:
+
+- /home/login/data/mariadb
+- /home/login/data/wordpress
+
+---
+
+## Docker Infrastructure Snapshot
+
+The structural architecture of this repository ensures that configurations are fully automated:
+- **Dockerfile**: Defines the installation layers, package management, and system prerequisites for each service.
+- **docker-compose.yml**: Orchestrates the whole stack, establishing dependencies, private network setups, and volume bindings.
+- **Entrypoint Scripts**: Manage runtime logic, environment variable interpolation, and system preparation tasks right before the main daemon claims PID 1.
+
+```text
+Nombre_del_Proyecto/
+├── docker-compose.yml
+└── srcs/
+    └── requirements/
+        ├── mariadb/
+        │   ├── Dockerfile
+        │   ├── conf/50-server.cnf
+        │   └── tools/entrypoint.sh
+        ├── nginx/
+        └── wordpress/
+```
+
+###Traffic flow:
 
 User -> NGINX -> WordPress (php-fpm) -> MariaDB
 
@@ -49,70 +85,6 @@ Key service ideas from my notes:
 - NGINX and WordPress must share website files so NGINX can resolve requested PHP paths before forwarding
 - php-fpm pool and main configs are loaded from php configuration directories, while wp-config.php belongs in WordPress web root
 
-## Comparisons
-
-### Virtual Machines vs Docker
-
-Virtual Machine in this project:
-
-- Required environment for development/evaluation
-- Full guest OS context
-
-Docker in this project:
-
-- Runs isolated services sharing the host kernel
-- Faster startup and easier reproducibility
-- Better fit for microservice-style separation (NGINX, WordPress, MariaDB)
-
-My notes also emphasize consistency (same behavior across environments), elasticity (fast startup), and isolation/security as practical reasons containers are preferred for service delivery.
-
-### Secrets vs Environment Variables
-
-From my notes, sensitive values are handled through .env and injected via docker-compose.yml.
-
-Environment variables (.env + compose propagation):
-
-- Keep credentials out of hardcoded compose content
-- Are injected into container environment at startup
-- Should be ignored in git repositories
-
-Secrets (concept in my notes via “Secrets Management” prompts):
-
-- Refer to protected sensitive values (passwords, credentials)
-- In my current documented implementation, this role is fulfilled through .env-based environment variables
-
-### Docker Network vs Host Network
-
-Docker bridge network in this project:
-
-- Planned as a dedicated project network (example: inception_network)
-- Provides internal DNS resolution by service/container name
-- Keeps internal services private unless explicitly published
-
-Host network:
-
-- Explicitly forbidden by project constraints
-- Breaks the intended isolation model used in this architecture
-
-### Docker Volumes vs Bind Mounts
-
-From my notes, both ideas appear during learning, with subject constraints highlighted.
-
-Named volumes:
-
-- Docker-managed volume abstraction
-- Required by the project requirements section in my notes
-- Used in compose with aliases and explicit naming
-
-Bind mounts:
-
-- Direct host-path mapping into containers
-- Mentioned in my notes when discussing persistence paths like /home/login/data
-
-The documented persistence objective is that data remains outside container lifecycle and is stored in host-visible paths, including:
-
-- /home/login/data/mariadb
-- /home/login/data/wordpress
 
 ## Instructions
 
@@ -126,7 +98,7 @@ Use this quick sequence to initialize the project environment before the normal 
 127.0.0.1 anagarri.42.fr
 ```
 
-2. Prepare persistence directories required by the project:
+2. Prepare persistence directories required by the project (Included in makefile):
 
 ```bash
 sudo mkdir -p /home/login/data/mariadb /home/login/data/wordpress
@@ -300,7 +272,7 @@ docker build -t mi_mariadb_personalizada .
 
 ## Defense Notes and Open Questions to Master
 
-Topics highlighted in my documentation for defense preparation:
+Topics highlighted:
 
 - PID 1 behavior, signal handling, zombie reaping
 - COPY vs ADD
@@ -315,10 +287,11 @@ Topics highlighted in my documentation for defense preparation:
 
 ## Resources
 
-### References captured in my notes
+### References
 
 - https://hub.docker.com/_/wordpress
 - https://www.cloudflare.com/es-es/learning/cdn/glossary/reverse-proxy/
+- https://mariadb.com/docs/
 
 ### How AI was used
 
@@ -327,3 +300,10 @@ In this repository workstream, AI was used for documentation tasks:
 - Reorganizing multiple Markdown notes into one coherent README structure
 - Rewriting for clarity while preserving the original ideas and constraints
 - Keeping technical explanations and personal project context intact
+
+
+
+
+
+
+
