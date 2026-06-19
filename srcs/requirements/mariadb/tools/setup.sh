@@ -12,32 +12,13 @@ if [ ! -d "/var/lib/mysql/mysql" ]; then
     mysql_install_db --user=mysql --datadir=/var/lib/mysql
 fi
 
-# Start MariaDB temporarily in background to run bootstrap SQL.
-mysqld_safe --datadir='/var/lib/mysql' --skip-networking &
-
-# Wait until MariaDB accepts connections.
-while ! mariadb-admin ping --silent; do
-    sleep 1
-done
-
-# Create application database from environment variable.
-mariadb -u root -e "CREATE DATABASE IF NOT EXISTS $MARIADB_DATABASE;"
-
-# Create application user (if missing) and grant DB privileges.
-mariadb -u root -e "CREATE USER IF NOT EXISTS '${MARIADB_USER}'@'%' IDENTIFIED BY '${MARIADB_PASSWORD}';"
-mariadb -u root -e "GRANT ALL PRIVILEGES ON ${MARIADB_DATABASE}.* TO '${MARIADB_USER}'@'%';"
-mariadb -u root -e "FLUSH PRIVILEGES;"
-
-# Exit client session and stop temporary bootstrap server.
-mariadb -e EXIT;
-
-mariadb-admin -u root shutdown
-
-echo "MariaDB ready to execute final process"
-# Wait until background MariaDB fully stops before final exec.
-while [ -f /var/run/mysqld/mysqld.pid ]; do
-   sleep 1
-done
+# Generate SQL that MariaDB will execute at startup.
+cat > /tmp/mariadb-init.sql <<EOF
+CREATE DATABASE IF NOT EXISTS \`$MARIADB_DATABASE\`;
+CREATE OR REPLACE USER '$MARIADB_USER'@'%' IDENTIFIED BY '$MARIADB_PASSWORD';
+GRANT ALL PRIVILEGES ON \`$MARIADB_DATABASE\`.* TO '$MARIADB_USER'@'%';
+FLUSH PRIVILEGES;
+EOF
 
 # Replace shell with final container command (PID 1).
 exec "$@"

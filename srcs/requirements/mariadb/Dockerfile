@@ -28,7 +28,7 @@ RUN mkdir -p /run/mysqld /var/run/mysqld /var/log/mysql \
 EXPOSE 3306
 
 # Default database process launched after setup.sh finishes bootstrap.
-CMD ["mysqld_safe"]
+CMD ["mysqld_safe", "--init-file=/tmp/mariadb-init.sql"]
 
 # Run initialization/bootstrap logic before launching MariaDB.
 ENTRYPOINT ["./setup.sh"]
