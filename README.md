@@ -1,5 +1,13 @@
 *This project has been created as part of the 42 curriculum by anagarri*
 
+<p align="center">
+    <img alt="Docker" src="https://img.shields.io/badge/Docker-%232496ED?style=for-the-badge&logo=docker&logoColor=white" />&nbsp;
+    <img alt="Docker Compose" src="https://img.shields.io/badge/Docker%20Compose-%231DB7ED?style=for-the-badge&logo=docker&logoColor=white" />&nbsp;
+    <img alt="NGINX" src="https://img.shields.io/badge/NGINX-%23009639?style=for-the-badge&logo=nginx&logoColor=white" />&nbsp;
+    <img alt="WordPress" src="https://img.shields.io/badge/WordPress-%231877F2?style=for-the-badge&logo=wordpress&logoColor=white" />&nbsp;
+    <img alt="MariaDB" src="https://img.shields.io/badge/MariaDB-%23F29111?style=for-the-badge&logo=mariadb&logoColor=white" />&nbsp;
+</p>
+
 # Inception
 
 ## Description
@@ -98,28 +106,22 @@ Use this quick sequence to initialize the project environment before the normal 
 127.0.0.1 anagarri.42.fr
 ```
 
-2. Prepare persistence directories required by the project (Included in makefile):
+2. Make sure `.env` exists inside `srcs/` with your database and WordPress variables.
 
-```bash
-sudo mkdir -p /home/login/data/mariadb /home/login/data/wordpress
-```
-
-3. Make sure `.env` exists inside `srcs/` with your database and WordPress variables.
-
-4. Initialize and start the infrastructure from the project root using your Makefile:
+3. Initialize and start the infrastructure from the project root using your Makefile:
 
 ```bash
 make all
 ```
 
-5. If your Makefile separates build and startup, run:
+4. If your Makefile separates build and startup, run:
 
 ```bash
 make build
 make up
 ```
 
-6. Validate that containers are up and HTTPS is reachable at:
+5. Validate that containers are up and HTTPS is reachable at:
 
 ```text
 https://anagarri.42.fr
@@ -254,36 +256,18 @@ docker build -t mi_mariadb_personalizada .
 ## Feature List
 
 - Multi-container architecture with isolated roles
-- TLS termination at NGINX (HTTPS entrypoint)
 - Internal service communication through Docker networking and DNS
 - Persistent storage strategy for WordPress and MariaDB data
 - Environment-driven configuration flow (.env -> compose -> container -> entrypoint)
 - Service startup orchestration via docker-compose.yml
 
-## Technical Choices
+## Services Summary
 
-- NGINX reverse proxy as single exposed edge
-- WordPress with php-fpm on internal port 9000
-- MariaDB internal service on port 3306
-- ENTRYPOINT scripts for runtime setup and PID 1 lifecycle control
-- Exec pattern in entrypoint scripts to pass signals correctly
-- Keep NGINX master config intact and add server block in modular conf path
-- Foreground process strategy so container lifecycle follows service lifecycle
+- **NGINX**: Acts as the secure entry point for the stack. Built from a custom `Dockerfile`, NGINX is configured to serve TLS (TLSv1.2 or TLSv1.3 only), run in the foreground (`daemon off`), and expose only port 443 to the host. It terminates TLS, manages SSL certificates, and reverse-proxies PHP requests to the WordPress `php-fpm` service (FastCGI on port 9000) across the private Docker network.
 
-## Defense Notes and Open Questions to Master
+- **WordPress**: Runs `php-fpm` in its own container (no NGINX inside). The WordPress image is built from a custom `Dockerfile`, configured via `.env` and `wp-config.php`, and may include tooling such as `wp-cli`. It listens on port 9000 for FastCGI requests and stores website files in a named Docker volume (persisted on the host under `/home/login/data/wordpress`) that is shared with NGINX so PHP paths can be resolved and served.
 
-Topics highlighted:
-
-- PID 1 behavior, signal handling, zombie reaping
-- COPY vs ADD
-- ENTRYPOINT vs CMD
-- Docker layers and build cache behavior
-- EXPOSE vs published ports
-- Alpine vs Debian tradeoffs
-- depends_on meaning (start order vs readiness)
-- Port conflict scenarios
-- Why network host is forbidden
-- Why latest tag is forbidden (reproducibility)
+- **MariaDB**: The dedicated database container built from a custom `Dockerfile`. MariaDB stores data in a named volume mapped to `/var/lib/mysql` (host persistence at `/home/login/data/mariadb`), is initialized via an `entrypoint` script (creates the DB and WordPress user), and is configured to listen on `0.0.0.0` inside the container so other services can connect. MariaDB is not exposed to the host and communicates only over the Compose bridge network.
 
 ## Resources
 
@@ -292,6 +276,8 @@ Topics highlighted:
 - https://hub.docker.com/_/wordpress
 - https://www.cloudflare.com/es-es/learning/cdn/glossary/reverse-proxy/
 - https://mariadb.com/docs/
+- https://hub.docker.com/_/nginx
+- https://docs.docker.com/compose/
 
 ### How AI was used
 
@@ -301,7 +287,7 @@ In this repository workstream, AI was used for documentation tasks:
 
 - Conceptual Validation: Assisting in the clear architectural distinction and technical comparison between Virtual Machines vs. Containers, Network Paradigms, Storage Strategies, and Secrets Processing.
 
-- Debugging Workflows: Analyzing standard MariaDB initial configuration pain points, such as resolving container networking scope issues (bind-address 0.0.0.0) and non-interactive installation strategies (DEBIAN_FRONTEND=noninteractive).
+- Debugging Workflows: Assisting with debugging and troubleshooting various configuration and deployment challenges throughout the infrastructure setup process.
 
 
 
