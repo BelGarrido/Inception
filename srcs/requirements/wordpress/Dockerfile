@@ -11,15 +11,19 @@ RUN chmod +x /usr/local/bin/setup.sh
 RUN apt-get update && apt-get install -y \
     php8.2-fpm \
     php8.2-mysql \
+    wget \
     curl \
-    sendmail \
+    # sendmail \
     unzip \
     mariadb-client \
     && rm -rf /var/lib/apt/lists/*
     
 # Download WordPress source archive and extract it under /tmp.
-RUN curl https://wordpress.org/latest.zip -o /tmp/wordpress.zip \
-    && unzip /tmp/wordpress.zip -d /tmp/
+RUN wget -O /tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz \
+    && tar -xzf /tmp/wordpress.tar.gz -C /tmp \
+    && rm -rf /var/www/html/* \
+    && cp -a /tmp/wordpress/. /var/www/html/ \
+    && rm -rf /tmp/wordpress /tmp/wordpress.tar.gz
 
 # Install WP-CLI in PATH for setup.sh usage.
 RUN curl -L https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp
@@ -28,6 +32,9 @@ RUN chmod +x /usr/local/bin/wp
 # Copy PHP-FPM pool and global configuration.
 COPY ./conf/www.conf /etc/php/8.2/fpm/pool.d/www.conf
 COPY ./conf/php-fpm.conf /etc/php/8.2/fpm/php-fpm.conf
+#COPY ./conf/wp-config.php /var/www/html/wp-config.php
+
+#RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 9000
 

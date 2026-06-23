@@ -56,6 +56,8 @@ services:
             context: ./requirements/nginx
             dockerfile: Dockerfile
         # Stable container name for easy service inspection/logging.
+        depends_on: 
+            - wordpress
         container_name: nginx
         # Load domain/TLS-related variables from .env.
         env_file:
@@ -90,14 +92,14 @@ volumes:
         driver_opts:
             type: none
             o: bind
-            device: /home/anagarri/data/mariadb
+            device: /home/anaigd/data/mariadb
     # WordPress application files volume shared by WordPress and Nginx.
     wp_data:
         driver: local
         driver_opts:
             type: none
             o: bind
-            device: /home/anagarri/data/wp
+            device: /home/anaigd/data/wp
 
 
 
