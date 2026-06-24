@@ -26,7 +26,6 @@ clean:
 
 fclean:
 	$(EXEC) $(SRC) down -v --rmi all
-	sudo docker system prune -a --force --volumes
 	@if [ -d "/home/$(USER)/data" ]; then \
 		sudo rm -rf /home/$(USER)/data; \
 		echo "Local data deleted."; \
